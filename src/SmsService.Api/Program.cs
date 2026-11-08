@@ -1,10 +1,18 @@
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using SmsService.Api.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    // Enums go over the wire as names ("Pending"), not numbers.
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.AddProblemDetails();
 builder.Services.AddSwaggerGen();
+
+// Code asks TimeProvider for "now" instead of DateTime.UtcNow, so tests can control time.
+builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(
