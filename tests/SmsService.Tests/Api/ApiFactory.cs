@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using SmsService.Api.Data;
+using SmsService.Api.Sending;
 using SmsService.Tests.Fakes;
 
 namespace SmsService.Tests.Api;
@@ -23,9 +24,14 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
 
     public ManualTimeProvider Time { get; } = new();
 
+    public FakeSmsProvider Provider { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+
+        // No background sending in API tests: they check what the API stores, and messages must stay Pending.
+        builder.UseSetting("Worker:Enabled", "false");
 
         builder.ConfigureTestServices(services =>
         {
@@ -38,6 +44,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Time);
+
+            // Never call a real provider from tests.
+            services.RemoveAll<ISmsProvider>();
+            services.AddSingleton<ISmsProvider>(Provider);
         });
     }
 
