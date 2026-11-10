@@ -95,6 +95,11 @@ public class MessagesController(AppDbContext db, TimeProvider time) : Controller
         {
             ModelState.AddModelError("pageSize", $"pageSize must be between 1 and {MaxPageSize}.");
         }
+        // Skip = (page - 1) * pageSize must fit in an int; otherwise it wraps negative and the DB query fails with 500.
+        else if (page >= 1 && (long)(page - 1) * pageSize > int.MaxValue)
+        {
+            ModelState.AddModelError("page", "page is too large.");
+        }
 
         if (!ModelState.IsValid)
         {
@@ -110,6 +115,7 @@ public class MessagesController(AppDbContext db, TimeProvider time) : Controller
         var total = await query.CountAsync(ct);
         var items = await query
             .OrderByDescending(m => m.CreatedAt)
+            .ThenByDescending(m => m.Id) // unique tie-breaker: stable pages when CreatedAt is equal
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(ct);

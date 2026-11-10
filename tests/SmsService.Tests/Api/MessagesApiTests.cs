@@ -99,6 +99,7 @@ public sealed class MessagesApiTests : IDisposable
     [InlineData("page=0")]
     [InlineData("pageSize=0")]
     [InlineData("pageSize=201")]
+    [InlineData("page=10737420&pageSize=200")] // (page - 1) * pageSize would overflow int
     public async Task List_rejects_bad_query(string query)
     {
         var response = await _client.GetAsync($"/messages?{query}");

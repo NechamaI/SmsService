@@ -37,7 +37,7 @@ docker compose up --build
 dotnet test
 ```
 
-62 בדיקות. לא צריך Docker: בדיקות ה־API רצות על SQLite in-memory, עם worker כבוי וספק מזויף.
+70 בדיקות. לא צריך Docker: בדיקות ה־API רצות על SQLite in-memory, עם worker כבוי וספק מזויף.
 
 ---
 

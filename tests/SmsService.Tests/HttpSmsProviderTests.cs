@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging.Abstractions;
 using SmsService.Api.Sending;
 
 namespace SmsService.Tests;
@@ -23,7 +24,7 @@ public sealed class HttpSmsProviderTests
     {
         var handler = new StubHandler(status, body);
         var http = new HttpClient(handler) { BaseAddress = new Uri("http://provider/") };
-        return (new HttpSmsProvider(http), handler);
+        return (new HttpSmsProvider(http, NullLogger<HttpSmsProvider>.Instance), handler);
     }
 
     [Fact]
@@ -40,6 +41,21 @@ public sealed class HttpSmsProviderTests
         Assert.Equal("+972521234567", sent.GetProperty("to").GetString());
         Assert.Equal("hi", sent.GetProperty("text").GetString());
         Assert.Equal(reference, sent.GetProperty("reference").GetGuid());
+    }
+
+    [Theory]
+    [InlineData("{}")]          // no id field
+    [InlineData("")]            // empty body
+    [InlineData("not json")]    // unreadable body
+    public async Task Success_without_a_readable_id_is_still_success(string body)
+    {
+        // The provider accepted the SMS. Retrying would send it again, so this must not be an error.
+        var (provider, _) = Create(HttpStatusCode.OK, body);
+
+        var result = await provider.SendAsync(Guid.NewGuid(), "+972521234567", "hi", CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Null(result.ProviderMessageId);
     }
 
     [Theory]

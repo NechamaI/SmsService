@@ -1,11 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace SmsService.Api.Sending;
 
 /// <summary>Calls the SMS provider over HTTP and turns its answer into a <see cref="ProviderResult"/>.</summary>
-public sealed class HttpSmsProvider(HttpClient http) : ISmsProvider
+public sealed class HttpSmsProvider(HttpClient http, ILogger<HttpSmsProvider> logger) : ISmsProvider
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     private sealed record SendRequest(string To, string Text, Guid Reference);
 
     private sealed record SendResponse(string? Id);
@@ -18,10 +21,15 @@ public sealed class HttpSmsProvider(HttpClient http) : ISmsProvider
 
             if (response.IsSuccessStatusCode)
             {
-                var payload = await response.Content.ReadFromJsonAsync<SendResponse>(ct);
-                return string.IsNullOrEmpty(payload?.Id)
-                    ? ProviderResult.Transient("Provider returned success without an id")
-                    : ProviderResult.Ok(payload.Id);
+                // 2xx means the provider accepted the SMS. Even if we can't read its id, retrying would send it again,
+                // so this is still a success (with no ProviderMessageId).
+                var id = TryReadId(await response.Content.ReadAsStringAsync(ct));
+                if (id is null)
+                {
+                    logger.LogWarning("Provider accepted message {Reference} but returned no readable id", reference);
+                }
+
+                return ProviderResult.Ok(id);
             }
 
             var code = (int)response.StatusCode;
@@ -41,6 +49,19 @@ public sealed class HttpSmsProvider(HttpClient http) : ISmsProvider
         {
             // HttpClient.Timeout fired, not a shutdown. The provider may have got the message anyway (documented risk).
             return ProviderResult.Transient($"Timeout after {http.Timeout.TotalSeconds:0}s");
+        }
+    }
+
+    private static string? TryReadId(string body)
+    {
+        try
+        {
+            var id = JsonSerializer.Deserialize<SendResponse>(body, JsonOptions)?.Id;
+            return string.IsNullOrEmpty(id) ? null : id;
+        }
+        catch (JsonException)
+        {
+            return null;
         }
     }
 }
