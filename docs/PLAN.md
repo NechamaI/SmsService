@@ -44,7 +44,7 @@ Inputs the spec implies but doesn't spell out; each has a pinning test in the ow
 ```
 SmsService.slnx
 docker-compose.yml, .gitignore, README.md, SPEC.md
-docs/2026-11-08-sms-service-plan.md
+docs/PLAN.md
 src/SmsService.Api/
     SmsService.Api.csproj, Dockerfile, .dockerignore, Program.cs, appsettings.json
     Controllers/MessagesController.cs
