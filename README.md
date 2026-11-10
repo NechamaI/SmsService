@@ -7,6 +7,28 @@
 
 ---
 
+## התחלה מהירה
+
+**דרישות:** ‏Docker Desktop פועל, והפורטים 8080, ‏8081 ו־1433 פנויים. ‏.NET 10 SDK נדרש רק להרצת הבדיקות.
+
+```bash
+git clone https://github.com/NechamaI/SmsService.git
+cd SmsService
+docker compose up --build
+```
+בהרצה הראשונה הבנייה לוקחת כמה דקות. ה־API עולה אחרי ש־SQL Server מוכן.
+
+**הדגמה ב־Swagger** (http://localhost:8080/swagger): בכל פעולה לוחצים **Try it out ← Execute**.
+1. `POST /messages` עם `{"to":"052-123-4567","body":"שלום"}`. מתקבל 202 עם `id`.
+2. `GET /messages/{id}` עם ה־`id` שהתקבל: ‏`Pending`, ותוך שניות `Sent`, עם `encoding: UCS2`.
+3. אותו דבר עם `"to":"052-123-4999"`: ‏`Failed` אחרי ניסיון אחד ("Recipient blocked").
+
+**הספק המדומה** הוא שירות בלי ממשק. רואים את הבקשות שהגיעו אליו בלוג: `docker compose logs -f mock-provider`. ה־`ref` בלוג הוא ה־`id` של ההודעה.
+
+**עצירה:** `docker compose down`. הנתונים לא נשמרים בין הרצות.
+
+---
+
 ## הרצה
 
 ```bash
